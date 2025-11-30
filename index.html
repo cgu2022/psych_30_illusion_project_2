@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lilac Chaser Illusion - Customizable Experiment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #FFFFFF; 
+            transition: background-color 0.3s;
+        }
+
+        /* Range inputs */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent; 
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        /* Custom scrollbar */
+        .controls-scroll::-webkit-scrollbar { width: 6px; }
+        .controls-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        .controls-scroll::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 3px;
+        }
+
+        #loadingOverlay {
+            display: none;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="relative flex justify-center items-center w-screen h-screen">
+
+    <canvas id="illusionCanvas" class="z-0 absolute inset-0"></canvas>
+
+    <div id="cross" class="z-10 absolute flex justify-center items-center transition-all duration-200 pointer-events-none select-none" style="color: black; font-size: 36px;">
+        <i class="fa-solid fa-plus"></i>
+    </div>
+    
+    <div class="bottom-4 left-4 z-10 absolute text-gray-400 text-xs pointer-events-none select-none">
+        Press <b>'Q'</b> to toggle circles • Press <b>'C'</b> to cycle colors
+    </div>
+
+    <button id="toggleControls" class="top-4 right-4 z-50 absolute bg-white/80 hover:bg-white shadow-lg backdrop-blur-md p-3 rounded-full text-gray-700 transition-colors">
+        <i class="fa-solid fa-sliders"></i>
+    </button>
+
+    <!-- Controls Panel -->
+    <div id="controlPanel" class="top-4 right-4 z-40 absolute flex flex-col bg-white/90 shadow-2xl backdrop-blur-md rounded-xl w-96 max-h-[90vh] overflow-hidden origin-top-right transition-transform duration-300 transform">
+        
+        <div class="flex justify-between items-center bg-gray-50/50 p-4 border-gray-200 border-b">
+            <h2 class="font-bold text-gray-800"><i class="mr-2 text-indigo-600 fa-solid fa-eye"></i>Lillac Chaser Illusion | by Chris Gu</h2>
+            <button id="closeControls" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <div class="flex-1 space-y-6 p-5 overflow-y-auto controls-scroll">
+            
+            <div class="bg-blue-50 p-3 border border-blue-100 rounded-lg text-gray-500 text-xs leading-relaxed">
+                <p><strong>Instructions:</strong> Stare at the cross in the middle of the screen. After 15-30s, the lilac circles vanish (Troxler's fading), leaving a rotating green spot (negative image).</p>
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">Rotation Speed</label>
+                    <span id="speedVal" class="font-mono text-gray-500 text-xs">100ms</span>
+                </div>
+                <input type="range" id="speedInput" min="20" max="500" step="10" value="100" class="w-full">
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">Circle Count</label>
+                    <span id="countVal" class="font-mono text-gray-500 text-xs">10</span>
+                </div>
+                <input type="range" id="countInput" min="4" max="30" step="1" value="10" class="w-full">
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">Circle Size</label>
+                    <span id="sizeVal" class="font-mono text-gray-500 text-xs">40px</span>
+                </div>
+                <input type="range" id="sizeInput" min="10" max="100" step="1" value="40" class="w-full">
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">Ring Radius</label>
+                    <span id="radiusVal" class="font-mono text-gray-500 text-xs">36%</span>
+                </div>
+                <input type="range" id="radiusInput" min="10" max="45" step="1" value="36" class="w-full">
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">Blur Strength</label>
+                    <span id="blurVal" class="font-mono text-gray-500 text-xs">22px</span>
+                </div>
+                <input type="range" id="blurInput" min="0" max="50" step="1" value="22" class="w-full">
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">Crosshair Size</label>
+                    <span id="crossSizeVal" class="font-mono text-gray-500 text-xs">36px</span>
+                </div>
+                <input type="range" id="crossSizeInput" min="10" max="100" step="2" value="36" class="w-full">
+            </div>
+
+            <div class="control-group">
+                <div class="flex justify-between mb-1">
+                    <label class="font-semibold text-gray-700 text-sm">GIF Quality</label>
+                    <span id="qualityVal" class="font-mono text-gray-500 text-xs">Best (1)</span>
+                </div>
+                <input type="range" id="qualityInput" min="1" max="30" step="1" value="1" class="w-full">
+                <p class="mt-1 text-[10px] text-gray-400">Lower value = Better quality, Larger file</p>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <div class="gap-4 grid grid-cols-3">
+                <div>
+                    <label class="block mb-1 font-bold text-gray-500 text-xs uppercase tracking-wider">Circles</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="color" id="circleColor" value="#FF6BFF" class="p-0 border-0 rounded w-8 h-8 cursor-pointer">
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-1 font-bold text-gray-500 text-xs uppercase tracking-wider">Background</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="color" id="bgColor" value="#FFFFFF" class="p-0 border-0 rounded w-8 h-8 cursor-pointer">
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-1 font-bold text-gray-500 text-xs uppercase tracking-wider">Crosshair</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="color" id="crossColor" value="#000000" class="p-0 border-0 rounded w-8 h-8 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+             <div class="control-group">
+                <label class="block mb-2 font-bold text-gray-500 text-xs uppercase tracking-wider">Shape</label>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-indigo-600 shadow-sm py-2 rounded font-semibold text-white text-xs shape-btn" data-shape="circle">Circle</button>
+                    <button class="flex-1 bg-gray-200 hover:bg-gray-300 py-2 rounded font-semibold text-gray-700 text-xs shape-btn" data-shape="square">Square</button>
+                </div>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <button id="exportGifBtn" class="flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-md py-3 rounded-lg w-full font-bold text-white text-sm transition">
+                <i class="fa-solid fa-film"></i> Export Loop as GIF
+            </button>
+
+            <button id="resetBtn" class="bg-gray-100 hover:bg-gray-200 mt-2 py-2 rounded-lg w-full font-bold text-gray-600 text-sm transition">
+                Reset Defaults
+            </button>
+        </div>
+    </div>
+
+    <!-- GIF Overlay -->
+    <div id="loadingOverlay" class="z-[100] absolute inset-0 flex flex-col justify-center items-center text-center">
+        <div class="mb-4 border-indigo-600 border-t-4 border-b-4 rounded-full w-16 h-16 animate-spin"></div>
+        <h3 class="font-bold text-gray-800 text-xl">Generating GIF...</h3>
+        <p class="mt-2 text-gray-500 text-sm">Capturing frames and encoding.</p>
+        <p id="loadingProgress" class="mt-1 font-mono text-indigo-600 text-sm">0%</p>
+    </div>
+
+    <script>
+        // Cache DOM elements for performance
+        const canvas = document.getElementById('illusionCanvas');
+        const ctx = canvas.getContext('2d');
+        const cross = document.getElementById('cross');
+        const appBody = document.body;
+
+        // UI state management
+        const ui = {
+            panel: document.getElementById('controlPanel'),
+            toggleBtn: document.getElementById('toggleControls'),
+            closeBtn: document.getElementById('closeControls'),
+            loader: document.getElementById('loadingOverlay'),
+            progress: document.getElementById('loadingProgress')
+        };
+        
+        // Core application state
+        const state = {
+            numCircles: 10,
+            speed: 100, // Animation tick rate in ms
+            circleSize: 40,
+            ringRadiusPercent: 36,
+            blur: 22, // Key component for the Troxler fading effect
+            crossSize: 36,
+            color: '#FF6BFF',
+            bgColor: '#FFFFFF',
+            crossColor: '#000000',
+            shape: 'circle',
+            currentGapIndex: 0,
+            lastTick: 0,
+            circlesVisible: true,
+            isRecording: false,
+            gifQuality: 3
+        };
+
+        // Deep clone for the reset functionality
+        const defaultState = JSON.parse(JSON.stringify(state));
+
+        // --- Utility Functions ---
+
+        // Converts HEX to HSL for easier color cycling logic
+        function hexToHSL(H) {
+            let r = 0, g = 0, b = 0;
+            if (H.length == 4) {
+                r = "0x" + H[1] + H[1]; g = "0x" + H[2] + H[2]; b = "0x" + H[3] + H[3];
+            } else if (H.length == 7) {
+                r = "0x" + H[1] + H[2]; g = "0x" + H[3] + H[4]; b = "0x" + H[5] + H[6];
+            }
+            r /= 255; g /= 255; b /= 255;
+            let cmin = Math.min(r,g,b), cmax = Math.max(r,g,b), delta = cmax - cmin, h = 0, s = 0, l = 0;
+
+            if (delta == 0) h = 0;
+            else if (cmax == r) h = ((g - b) / delta) % 6;
+            else if (cmax == g) h = (b - r) / delta + 2;
+            else h = (r - g) / delta + 4;
+
+            h = Math.round(h * 60);
+            if (h < 0) h += 360;
+            l = (cmax + cmin) / 2;
+            s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+            return { h, s, l };
+        }
+
+        // Converts back to HEX for input value updates
+        function hslToHex(h, s, l) {
+            let c = (1 - Math.abs(2 * l - 1)) * s,
+                x = c * (1 - Math.abs(((h / 60) % 2) - 1)),
+                m = l - c / 2,
+                r = 0, g = 0, b = 0;
+
+            if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+            else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+            else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+            else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+            else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+            else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+
+            const toHex = (n) => {
+                const hex = Math.round((n + m) * 255).toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            };
+            return "#" + toHex(r) + toHex(g) + toHex(b);
+        }
+
+        let width, height, centerX, centerY, radius;
+
+        // Resizes canvas to fill the screen and recalculates center/radius
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            centerX = width / 2;
+            centerY = height / 2;
+            // Radius is relative to the smallest screen dimension to fit well on mobile
+            radius = Math.min(width, height) * (state.ringRadiusPercent / 100);
+            draw();
+        }
+
+        window.addEventListener('resize', resize);
+
+        function drawShape(x, y, size, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            if (state.shape === 'circle') {
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+            } else {
+                ctx.rect(x - size, y - size, size * 2, size * 2);
+            }
+            ctx.fill();
+        }
+
+        // Main render loop
+        function draw() {
+            // 1. Reset any existing filters to ensure a clean clear/fill
+            ctx.filter = 'none';
+            
+            // 2. Explicitly fill background (fixes transparency issues in GIF export)
+            // This overlays the body background but ensures the canvas is self-contained
+            ctx.fillStyle = state.bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            if (!state.circlesVisible) return;
+
+            // 3. Apply blur filter for the illusion circles
+            // Note: ctx.filter is supported in most modern browsers
+            ctx.filter = `blur(${state.blur}px)`;
+
+            const angleStep = (Math.PI * 2) / state.numCircles;
+
+            for (let i = 0; i < state.numCircles; i++) {
+                // Skip the current gap to create the "chaser" effect
+                if (i === state.currentGapIndex) continue;
+
+                // -PI/2 offsets the start to 12 o'clock
+                const angle = i * angleStep - Math.PI / 2; 
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+
+                drawShape(x, y, state.circleSize, state.color);
+            }
+            
+            // Clean up filter for next frame
+            ctx.filter = 'none';
+        }
+
+        function animate(timestamp) {
+            if (state.isRecording) return; // Pause rendering while capturing frames
+
+            if (!state.lastTick) state.lastTick = timestamp;
+            const elapsed = timestamp - state.lastTick;
+
+            // Throttle updates to the specified speed (ms)
+            if (elapsed > state.speed) {
+                state.currentGapIndex = (state.currentGapIndex + 1) % state.numCircles;
+                state.lastTick = timestamp;
+                draw();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Handles generating the GIF using gif.js
+        async function exportGif() {
+            if (state.isRecording) return;
+            state.isRecording = true;
+            ui.loader.style.display = 'flex';
+            ui.progress.innerText = 'Initializing...';
+
+            // Workaround: Load worker from Blob to avoid Cross-Origin issues with CDNs
+            let workerBlobUrl;
+            try {
+                const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+                if (!res.ok) throw new Error("Network error");
+                const blob = new Blob([await res.text()], { type: 'application/javascript' });
+                workerBlobUrl = URL.createObjectURL(blob);
+            } catch (e) {
+                console.error(e);
+                alert("GIF encoder init failed.");
+                state.isRecording = false;
+                ui.loader.style.display = 'none';
+                return;
+            }
+
+            const gif = new GIF({
+                workers: 2,
+                quality: state.gifQuality, // 1 is best quality (lowest quantization noise)
+                width: width,
+                height: height,
+                workerScript: workerBlobUrl,
+                background: state.bgColor
+            });
+            
+            const totalFrames = state.numCircles;
+            const originalGapIndex = state.currentGapIndex;
+            let frameIndex = 0;
+
+            // Frame capture loop
+            function captureNextFrame() {
+                if (frameIndex < totalFrames) {
+                    state.currentGapIndex = frameIndex;
+                    draw();
+                    
+                    // Manually draw the cross onto the canvas because the 
+                    // DOM element is not captured by gif.js
+                    ctx.save();
+                    ctx.filter = 'none'; // Ensure cross is crisp
+                    
+                    // Clean background behind cross to prevent quantization artifacts (pink halo)
+                    ctx.fillStyle = state.bgColor;
+                    const cleanSize = state.crossSize * 1.5;
+                    ctx.fillRect(centerX - cleanSize/2, centerY - cleanSize/2, cleanSize, cleanSize);
+
+                    ctx.fillStyle = state.crossColor; // Use selected cross color
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `900 ${state.crossSize}px "Font Awesome 6 Free"`;
+                    ctx.fillText("\uf067", centerX, centerY);
+                    ctx.restore();
+
+                    gif.addFrame(canvas, {copy: true, delay: state.speed});
+
+                    frameIndex++;
+                    const pct = Math.round((frameIndex / totalFrames) * 50);
+                    ui.progress.innerText = `Capturing ${pct}%`;
+                    
+                    // Small timeout allows UI to update
+                    setTimeout(captureNextFrame, 10);
+                } else {
+                    ui.progress.innerText = "Encoding GIF...";
+                    gif.render();
+                }
+            }
+
+            gif.on('progress', p => {
+                ui.progress.innerText = `Encoding ${50 + Math.round(p * 50)}%`;
+            });
+
+            gif.on('finished', blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'lilac-chaser-illusion.gif';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Cleanup and resume animation
+                state.isRecording = false;
+                state.currentGapIndex = originalGapIndex;
+                ui.loader.style.display = 'none';
+                requestAnimationFrame(animate);
+            });
+
+            captureNextFrame();
+        }
+
+        document.getElementById('exportGifBtn').addEventListener('click', exportGif);
+
+        function updateUI() {
+            document.getElementById('speedVal').innerText = state.speed + 'ms';
+            document.getElementById('countVal').innerText = state.numCircles;
+            document.getElementById('sizeVal').innerText = state.circleSize + 'px';
+            document.getElementById('radiusVal').innerText = state.ringRadiusPercent + '%';
+            document.getElementById('blurVal').innerText = state.blur + 'px';
+            document.getElementById('crossSizeVal').innerText = state.crossSize + 'px';
+            document.getElementById('qualityVal').innerText = state.gifQuality === 1 ? 'Best (1)' : state.gifQuality;
+
+            cross.style.fontSize = state.crossSize + 'px';
+            cross.style.color = state.crossColor;
+            appBody.style.backgroundColor = state.bgColor;
+            document.getElementById('circleColor').value = state.color;
+            document.getElementById('bgColor').value = state.bgColor;
+            document.getElementById('crossColor').value = state.crossColor;
+        }
+
+        // Event Listeners
+        document.getElementById('speedInput').addEventListener('input', e => {
+            state.speed = parseInt(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('countInput').addEventListener('input', e => {
+            state.numCircles = parseInt(e.target.value);
+            state.currentGapIndex = 0; 
+            draw();
+            updateUI();
+        });
+
+        document.getElementById('sizeInput').addEventListener('input', e => {
+            state.circleSize = parseInt(e.target.value);
+            draw();
+            updateUI();
+        });
+
+        document.getElementById('radiusInput').addEventListener('input', e => {
+            state.ringRadiusPercent = parseInt(e.target.value);
+            resize(); 
+            updateUI();
+        });
+
+        document.getElementById('blurInput').addEventListener('input', e => {
+            state.blur = parseInt(e.target.value);
+            draw();
+            updateUI();
+        });
+
+        document.getElementById('crossSizeInput').addEventListener('input', e => {
+            state.crossSize = parseInt(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('qualityInput').addEventListener('input', e => {
+            state.gifQuality = parseInt(e.target.value);
+            updateUI();
+        });
+
+        document.getElementById('circleColor').addEventListener('input', e => {
+            state.color = e.target.value;
+            draw();
+        });
+
+        document.getElementById('bgColor').addEventListener('input', e => {
+            state.bgColor = e.target.value;
+            updateUI();
+        });
+
+        document.getElementById('crossColor').addEventListener('input', e => {
+            state.crossColor = e.target.value;
+            updateUI();
+        });
+
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                // Toggle active state styles
+                document.querySelectorAll('.shape-btn').forEach(b => {
+                    b.classList.remove('bg-indigo-600', 'text-white');
+                    b.classList.add('bg-gray-200', 'text-gray-700');
+                });
+                e.target.classList.remove('bg-gray-200', 'text-gray-700');
+                e.target.classList.add('bg-indigo-600', 'text-white');
+                
+                state.shape = e.target.dataset.shape;
+                draw();
+            });
+        });
+
+        window.addEventListener('keydown', e => {
+            const key = e.key.toLowerCase();
+            if (key === 'q') {
+                state.circlesVisible = !state.circlesVisible;
+                draw();
+            } else if (key === 'c') {
+                // Cycle colors by shifting Hue
+                const hsl = hexToHSL(state.color);
+                hsl.h = (hsl.h + 30) % 360;
+                state.color = hslToHex(hsl.h, hsl.s, hsl.l);
+                draw();
+                updateUI();
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            Object.assign(state, defaultState);
+            
+            // Sync inputs to state
+            document.getElementById('speedInput').value = state.speed;
+            document.getElementById('countInput').value = state.numCircles;
+            document.getElementById('sizeInput').value = state.circleSize;
+            document.getElementById('radiusInput').value = state.ringRadiusPercent;
+            document.getElementById('blurInput').value = state.blur;
+            document.getElementById('crossSizeInput').value = state.crossSize;
+            document.getElementById('qualityInput').value = state.gifQuality;
+            document.getElementById('circleColor').value = state.color;
+            document.getElementById('bgColor').value = state.bgColor;
+            document.getElementById('crossColor').value = state.crossColor;
+
+            resize();
+            updateUI();
+        });
+
+        let isPanelOpen = true;
+        function togglePanel() {
+            isPanelOpen = !isPanelOpen;
+            const cls = ui.panel.classList;
+            if (isPanelOpen) {
+                cls.remove('scale-0', 'opacity-0');
+                cls.add('scale-100', 'opacity-100');
+                ui.toggleBtn.classList.add('hidden');
+            } else {
+                cls.add('scale-0', 'opacity-0');
+                cls.remove('scale-100', 'opacity-100');
+                ui.toggleBtn.classList.remove('hidden');
+            }
+        }
+
+        ui.closeBtn.addEventListener('click', togglePanel);
+        ui.toggleBtn.addEventListener('click', togglePanel);
+
+        // Initialize
+        window.onload = function() {
+            resize();
+            updateUI();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>
